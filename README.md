@@ -1,9 +1,10 @@
 # Audio Transcription with Gemini API
 
-This project provides two implementations for transcribing audio from your microphone using Google's Gemini API:
+This project provides three implementations for transcribing audio from your microphone using Google's Gemini API:
 
 1. **Chunk-Based Transcription** (`transcribe_chunked.py`): Records audio in fixed-duration chunks, processes each chunk separately.
 2. **Continuous Transcription** (`transcribe_continuous.py`): Continuously records audio and processes overlapping chunks for a more seamless experience.
+3. **Live Transcription** (`transcribe_live.py`): Records audio and processes with the Gemini Live Api. 
 
 **Note:** Both implementations use the standard Gemini API, which has higher latency compared to the real-time streaming Gemini Live API (see `transcribe_live.py` for reference).
 
@@ -64,8 +65,6 @@ python transcribe_continuous.py
 - `transcribe_live.py`: Live API implementation (for reference)
 - `requirements.txt`: List of required Python packages
 - `.env`: Contains your Gemini API key
-- `example.py`: Original Live API example file (for reference)
-- `example-lite.py`: Standard API example file (for reference)
 
 ## Troubleshooting
 
