@@ -175,3 +175,5 @@ cython_debug/
 .gitignore
 .DS_Store
 memorybank/
+.wav
+*.wav

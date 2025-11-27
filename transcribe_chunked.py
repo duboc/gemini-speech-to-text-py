@@ -1,21 +1,25 @@
 """
-Chunk-Based Audio Transcription using Standard Gemini API
+Chunk-Based Audio Transcription using Standard Gemini API (Vertex AI)
 
 This script captures audio from your microphone in chunks, sends each chunk
-to the standard Google Gemini API for transcription, and displays the results.
+to the standard Google Gemini API (Vertex AI) for transcription, and displays the results.
 
 Note: This approach has higher latency compared to the Gemini Live API.
 
 ## Setup
 
-Install dependencies:
-```
-pip install -r requirements.txt
-```
-Ensure your API key is in .env:
-```
-GEMINI_API_KEY=your_api_key_here
-```
+1. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+2. Authenticate:
+   ```
+   gcloud auth application-default login
+   ```
+3. Set GOOGLE_CLOUD_PROJECT in .env:
+   ```
+   GOOGLE_CLOUD_PROJECT=your_project_id
+   ```
 """
 
 import asyncio
@@ -28,11 +32,13 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-# Load API key from .env file
+# Load environment variables
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in .env file")
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+LOCATION = "us-central1"
+
+if not PROJECT_ID:
+    raise ValueError("GOOGLE_CLOUD_PROJECT not found in .env file or environment")
 
 # Audio configuration
 FORMAT = pyaudio.paInt16
@@ -42,13 +48,17 @@ CHUNK_SIZE = 1024
 CHUNK_DURATION = 5  # Duration of each audio chunk in seconds
 
 # Gemini model configuration
-MODEL = "gemini-2.0-flash-lite" # Using model from documentation that supports audio input
+MODEL = "gemini-2.0-flash-exp"
 
 # Initialize PyAudio
 pya = pyaudio.PyAudio()
 
-# Configure Gemini client (as per example-lite.py)
-client = genai.Client(api_key=api_key)
+# Configure Gemini client for Vertex AI (ADC)
+client = genai.Client(
+    vertexai=True,
+    project=PROJECT_ID,
+    location=LOCATION
+)
 
 # System instruction for the model
 SYSTEM_INSTRUCTION = "act as a live transcriber, only write back what you hear. no explanation and the language is portuguese but could mix english words."
@@ -56,37 +66,34 @@ SYSTEM_INSTRUCTION = "act as a live transcriber, only write back what you hear. 
 def transcribe_audio_chunk(audio_bytes: bytes) -> str:
     """Sends an audio chunk (WAV format) to Gemini API and returns transcription."""
     try:
-        # Prepare the content following the structure in example-lite.py
+        # Prepare the content
         contents = [
             types.Content(
                 role="user",
                 parts=[
-                    types.Part.from_text(text=SYSTEM_INSTRUCTION),  # System instruction
-                    # Try using from_bytes for audio data
+                    types.Part.from_text(text=SYSTEM_INSTRUCTION),
                     types.Part.from_bytes(data=audio_bytes, mime_type='audio/wav')
                 ],
             ),
         ]
         
-        # Call generate_content on client.models, as shown in example-lite.py and documentation
+        # Call generate_content
         response = client.models.generate_content(
             model=MODEL,
             contents=contents
         )
         
         # Extract text from the response
-        # Ensure response object is checked before accessing attributes
         if response and hasattr(response, 'parts') and response.parts:
              return "".join(part.text for part in response.parts if hasattr(part, 'text'))
         elif response and hasattr(response, 'text'):
-             return response.text # Handle cases where text is directly in response
+             return response.text
         else:
              print(f"Warning: No text found in response object or its parts. Response: {response}")
              return ""
 
     except Exception as e:
         print(f"\n❌ Error during transcription: {e}")
-        # print(f"Response received: {getattr(response, '_raw_response', 'N/A')}") # Uncomment for debugging
         return "[Transcription Error]"
 
 
@@ -105,7 +112,8 @@ async def main():
             frames_per_buffer=CHUNK_SIZE,
         )
 
-        print("\n🎙️  Chunk-Based Transcription Started")
+        print("\n🎙️  Chunk-Based Transcription Started (Gemini 2.0 Flash - Vertex AI)")
+        print(f"Project: {PROJECT_ID}")
         print(f"Recording in {CHUNK_DURATION}-second chunks. Press Ctrl+C to stop.")
         print("==========================================")
 
@@ -144,10 +152,6 @@ async def main():
             audio_bytes = wav_buffer.read()
 
             # Transcribe the chunk (run synchronously for simplicity in the loop)
-            # For better performance, this could be run in a separate thread/process
-            # transcription = await asyncio.to_thread(transcribe_audio_chunk, audio_bytes)
-            
-            # Running synchronously as generate_content is blocking
             transcription = transcribe_audio_chunk(audio_bytes) 
 
             if transcription:

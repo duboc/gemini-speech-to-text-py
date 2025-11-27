@@ -1,19 +1,23 @@
 """
-Continuous Audio Transcription using Gemini API
+Continuous Audio Transcription using Gemini API (Vertex AI)
 
 This script continuously captures audio from your microphone and sends overlapping
 chunks to the Gemini API for transcription, creating a seamless transcription experience.
 
 ## Setup
 
-Install dependencies:
-```
-pip install -r requirements.txt
-```
-Ensure your API key is in .env:
-```
-GEMINI_API_KEY=your_api_key_here
-```
+1. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+2. Authenticate:
+   ```
+   gcloud auth application-default login
+   ```
+3. Set GOOGLE_CLOUD_PROJECT in .env:
+   ```
+   GOOGLE_CLOUD_PROJECT=your_project_id
+   ```
 """
 
 import asyncio
@@ -28,11 +32,13 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-# Load API key from .env file
+# Load environment variables
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in .env file")
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+LOCATION = "us-central1"
+
+if not PROJECT_ID:
+    raise ValueError("GOOGLE_CLOUD_PROJECT not found in .env file or environment")
 
 # Audio configuration
 FORMAT = pyaudio.paInt16
@@ -43,7 +49,7 @@ CHUNK_DURATION = 5  # Duration of each audio chunk in seconds
 OVERLAP_DURATION = 1  # Overlap between chunks in seconds (to avoid missing words at boundaries)
 
 # Gemini model configuration
-MODEL = "gemini-2.5-flash"  # Using model from documentation that supports audio input
+MODEL = "gemini-2.0-flash-exp"
 
 # System instruction for the model
 SYSTEM_INSTRUCTION = "act as a live transcriber, only write back what you hear. no explanation and the language is portuguese but could mix english words."
@@ -55,7 +61,13 @@ class ContinuousTranscriber:
         self.is_running = True
         self.audio_stream = None
         self.pya = pyaudio.PyAudio()
-        self.client = genai.Client(api_key=api_key)
+        
+        # Configure Gemini client for Vertex AI (ADC)
+        self.client = genai.Client(
+            vertexai=True,
+            project=PROJECT_ID,
+            location=LOCATION
+        )
         
         # Buffer to store recent audio frames for creating overlapping chunks
         self.frame_buffer = deque(maxlen=int(SAMPLE_RATE / CHUNK_SIZE * (CHUNK_DURATION + OVERLAP_DURATION)))
@@ -177,8 +189,8 @@ class ContinuousTranscriber:
                 
                 # Display all recent transcriptions
                 os.system('cls' if os.name == 'nt' else 'clear')
-                print("\n🎙️  Continuous Transcription")
-                print("==========================")
+                print("\n🎙️  Continuous Transcription (Gemini 2.0 Flash - Vertex AI)")
+                print("====================================================")
                 print("Recent transcriptions (newest at bottom):")
                 for t in self.recent_transcriptions:
                     print(t)
@@ -192,6 +204,7 @@ class ContinuousTranscriber:
         try:
             print("\n🎙️  Continuous Audio Transcription Started")
             print("=========================================")
+            print(f"Project: {PROJECT_ID}")
             print("Recording and transcribing continuously...")
             
             # Start tasks

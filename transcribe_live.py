@@ -1,16 +1,23 @@
 """
-Live Audio Transcription using Gemini Live API
+Live Audio Transcription using Gemini Live API (Vertex AI)
 
 This script captures audio from your microphone and provides real-time
-transcription using Google's Gemini Live API.
+transcription using Google's Gemini Live API via Vertex AI (ADC).
 
 ## Setup
 
-To install the dependencies for this script, run:
-
-```
-pip install -r requirements.txt
-```
+1. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+2. Authenticate with Google Cloud:
+   ```
+   gcloud auth application-default login
+   ```
+3. Set GOOGLE_CLOUD_PROJECT in .env:
+   ```
+   GOOGLE_CLOUD_PROJECT=your_project_id
+   ```
 """
 
 import asyncio
@@ -21,11 +28,13 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-# Load API key from .env file
+# Load environment variables
 load_dotenv()
-api_key = os.getenv("GEMINI_API_KEY")
-if not api_key:
-    raise ValueError("GEMINI_API_KEY not found in .env file")
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+LOCATION = "us-central1"  # Default Vertex AI location
+
+if not PROJECT_ID:
+    raise ValueError("GOOGLE_CLOUD_PROJECT not found in .env file or environment")
 
 # Audio configuration
 FORMAT = pyaudio.paInt16
@@ -34,13 +43,18 @@ SAMPLE_RATE = 16000
 CHUNK_SIZE = 1024
 
 # Gemini model configuration
-MODEL = "models/gemini-2.0-flash-exp"
+MODEL = "gemini-2.5-flash"
 
 # Initialize PyAudio
 pya = pyaudio.PyAudio()
 
-# Configure Gemini client
-client = genai.Client(http_options={"api_version": "v1alpha"}, api_key=api_key)
+# Configure Gemini client for Vertex AI
+client = genai.Client(
+    vertexai=True,
+    project=PROJECT_ID,
+    location=LOCATION,
+    http_options={"api_version": "v1alpha"}
+)
 
 # Configure for text-only responses (transcription)
 CONFIG = types.LiveConnectConfig(
@@ -120,8 +134,9 @@ class TranscriptionLoop:
 
     async def run(self):
         """Main execution loop"""
-        print("\n📝 Live Audio Transcription")
-        print("==========================")
+        print("\n📝 Live Audio Transcription (Gemini 2.0 Flash - Vertex AI)")
+        print("====================================================")
+        print(f"Project: {PROJECT_ID}")
         print("This app will transcribe your speech in real-time.")
         
         try:
