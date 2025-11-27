@@ -43,7 +43,7 @@ CHUNK_DURATION = 5  # Duration of each audio chunk in seconds
 OVERLAP_DURATION = 1  # Overlap between chunks in seconds (to avoid missing words at boundaries)
 
 # Gemini model configuration
-MODEL = "gemini-2.0-flash"  # Using model from documentation that supports audio input
+MODEL = "gemini-2.5-flash"  # Using model from documentation that supports audio input
 
 # System instruction for the model
 SYSTEM_INSTRUCTION = "act as a live transcriber, only write back what you hear. no explanation and the language is portuguese but could mix english words."
